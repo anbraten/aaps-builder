@@ -1,3 +1,6 @@
+> [!NOTE]  
+> If you just forked this repository you can go back to the build process [here](https://aaps-builder.vercel.app/).
+
 # AndroidAPS builder :wrench:
 
 AAPS builder allows you to build [AAPS](https://github.com/nightscout/AndroidAPS) using Github Actions (in the cloud) and avoid messing with Android Studio.
