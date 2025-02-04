@@ -102,9 +102,9 @@ jobs:
         shell: bash
         if: ${{ inputs.dropboxAccessToken != '' }}
         run: |
-          curl -X POST https://content.dropboxapi.com/2/files/upload \
+          curl -X POST https://content.dropboxapi.com/2/files/upload --fail \
             --header "Authorization: Bearer ${{ inputs.dropboxAccessToken }}" \
-            --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-$AAPS_VERSION.apk\"}" \
+            --header "Dropbox-API-Arg: {\"path\":\"/AndroidAPS-$AAPS_VERSION.apk\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary @${{steps.sign_app.outputs.signedReleaseFile}}
 
@@ -112,7 +112,7 @@ jobs:
         shell: bash
         if: ${{ inputs.googleDriveAccessToken != '' }}
         run: |
-          curl -X POST -L \
+          curl -X POST -L --fail \
             --header "Authorization: Bearer ${{ inputs.googleDriveAccessToken }}" \
             -F "metadata={ \
               \"name\":\"AndroidAPS-$AAPS_VERSION.apk\" \
