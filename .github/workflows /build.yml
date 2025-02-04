@@ -44,11 +44,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Run Build Project
       - name: Build with Gradle
         run: ./gradlew app:assembleFullRelease
 
-      # Setup build tool version variable
       - name: Setup build tool version variable
         shell: bash
         run: |
@@ -56,7 +54,6 @@ jobs:
           echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
           echo Last build tool version is: $BUILD_TOOL_VERSION
 
-      # Sign APK File
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
         id: sign_app
@@ -71,11 +68,28 @@ jobs:
           # BUILD_TOOLS_VERSION: "35.0.2"
           BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
 
-      # Upload Artifact Build
-      - name: Upload Logfiles
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: 'App-Build-${{ github.run_number }}'
           path: ${{steps.sign_app.outputs.signedReleaseFile}}
           # path: app/build/outputs/apk/full/release/app-full-release-unsigned-signed.apk
           retention-days: 1
+
+      - name: Rename file
+        run: |
+            AAPS_VERSION=$(grep 'const val appVersion' buildSrc/src/main/kotlin/Versions.kt | awk -F'"' '{print $2}' )
+            echo "AAPS version: $AAPS_VERSION"
+            echo "AAPS_VERSION=$AAPS_VERSION" >> $GITHUB_ENV
+            SOURCE_FILE="app/build/outputs/apk/full/release/app-full-release-unsigned-signed.apk"
+            TARGET_FILE="app/build/outputs/apk/full/release/AndroidAPS-${VERSION}.apk"
+            echo "AAPS apk file: $TARGET_FILE"
+            echo "AAPS_APK_FILE=$TARGET_FILE" >> $GITHUB_ENV
+  
+            if [ -f "$SOURCE_FILE" ]; then
+              mv "$SOURCE_FILE" "$TARGET_FILE"
+              echo "File has been renamed to: $TARGET_FILE"
+            else
+              echo "Original file not found: $SOURCE_FILE"
+              exit 1
+            fi
