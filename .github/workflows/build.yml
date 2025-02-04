@@ -104,9 +104,9 @@ jobs:
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-        if:
+        if: ${{ inputs.uploadAsArtifact == true }}
         with:
-          name: 'App-Build-${{ github.run_number }}'
+          name: 'AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}'
           path: ${{steps.sign_app.outputs.signedReleaseFile}}
           # path: app/build/outputs/apk/full/release/app-full-release-unsigned-signed.apk
           retention-days: 1
@@ -117,7 +117,7 @@ jobs:
         run: |
           curl -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer ${{ inputs.dropboxAccessToken }}" \
-            --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-${{ steps.rename_file.AAPS_VERSION }}.apk\"}" \
+            --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}.apk\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary @${{steps.sign_app.outputs.signedReleaseFile}}
 
@@ -128,7 +128,7 @@ jobs:
           curl -X POST -L \
             --header "Authorization: Bearer ${{ inputs.googleDriveAccessToken }}" \
             -F "metadata={ \
-              \"name\":\"AndroidAPS-${{ steps.rename_file.AAPS_VERSION }}.apk\" \
+              \"name\":\"AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}.apk\" \
               };type=application/json;charset=UTF-8" \
             -F "file=@${{steps.sign_app.outputs.signedReleaseFile}}" \
           "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
