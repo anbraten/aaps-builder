@@ -83,30 +83,17 @@ jobs:
           # BUILD_TOOLS_VERSION: "35.0.2"
           BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
 
-      - name: Rename file
-        id: rename_file
+      - name: Get AAPS version
         run: |
           AAPS_VERSION=$(grep 'const val appVersion' buildSrc/src/main/kotlin/Versions.kt | awk -F'"' '{print $2}' )
           echo "AAPS version: $AAPS_VERSION"
           echo "AAPS_VERSION=$AAPS_VERSION" >> $GITHUB_ENV
-          SOURCE_FILE=${{steps.sign_app.outputs.signedReleaseFile}}
-          TARGET_FILE="app/build/outputs/apk/full/release/AndroidAPS-${AAPS_VERSION}.apk"
-          echo "AAPS apk file: $TARGET_FILE"
-          echo "AAPS_APK_FILE=$TARGET_FILE" >> $GITHUB_ENV
-
-          if [ -f "$SOURCE_FILE" ]; then
-            # cp "$SOURCE_FILE" "$TARGET_FILE"
-            echo "File has been copied to: $TARGET_FILE"
-          else
-            echo "Original file not found: $SOURCE_FILE"
-            exit 1
-          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         if: ${{ inputs.uploadAsArtifact == true }}
         with:
-          name: 'AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}'
+          name: 'AndroidAPS-$AAPS_VERSION'
           path: ${{steps.sign_app.outputs.signedReleaseFile}}
           # path: app/build/outputs/apk/full/release/app-full-release-unsigned-signed.apk
           retention-days: 1
@@ -117,7 +104,7 @@ jobs:
         run: |
           curl -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer ${{ inputs.dropboxAccessToken }}" \
-            --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}.apk\"}" \
+            --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-$AAPS_VERSION.apk\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary @${{steps.sign_app.outputs.signedReleaseFile}}
 
@@ -128,7 +115,7 @@ jobs:
           curl -X POST -L \
             --header "Authorization: Bearer ${{ inputs.googleDriveAccessToken }}" \
             -F "metadata={ \
-              \"name\":\"AndroidAPS-${{ steps.rename_file.outputs.AAPS_VERSION }}.apk\" \
+              \"name\":\"AndroidAPS-$AAPS_VERSION.apk\" \
               };type=application/json;charset=UTF-8" \
             -F "file=@${{steps.sign_app.outputs.signedReleaseFile}}" \
           "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
