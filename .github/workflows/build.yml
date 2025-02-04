@@ -116,7 +116,7 @@ jobs:
         if: ${{ inputs.dropboxAccessToken != '' }}
         run: |
           curl -X POST https://content.dropboxapi.com/2/files/upload \
-            --header "Authorization: Bearer ${{ input.dropboxAccessToken }}" \
+            --header "Authorization: Bearer ${{ inputs.dropboxAccessToken }}" \
             --header "Dropbox-API-Arg: {\"path\":\"AndroidAPS-${{ steps.rename_file.AAPS_VERSION }}.apk\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary @${{steps.sign_app.outputs.signedReleaseFile}}
