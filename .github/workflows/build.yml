@@ -13,6 +13,11 @@ on:
         description: 'Ref / Branch'
         required: true
         default: 'master'
+      flavor:
+        type: string
+        description: 'App or wear'
+        required: true
+        default: 'app'
       keyStoreContent:
         type: string
         description: 'Base64 encoded keystore file'
@@ -59,8 +64,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
+      - name: Build app with Gradle
+        if: ${{ inputs.flavor == 'app' }}
         run: ./gradlew app:assembleFullRelease
+
+      - name: Build wear with Gradle
+        if: ${{ inputs.flavor == 'wear' }}
+        run: |
+          ./gradlew wear:assembleFullRelease
+          mv wear/ app/
 
       - name: Setup build tool version variable
         shell: bash
@@ -88,6 +100,8 @@ jobs:
           AAPS_VERSION=$(grep 'const val appVersion' buildSrc/src/main/kotlin/Versions.kt | awk -F'"' '{print $2}' )
           echo "AAPS version: $AAPS_VERSION"
           echo "AAPS_VERSION=$AAPS_VERSION" >> $GITHUB_ENV
+          echo "AAPS_APK_FILE=AndroidAPS${{ inputs.flavor == 'wear' && '-wear' || '' }}-$AAPS_VERSION.apk" >> $GITHUB_ENV
+          echo "AAPS APK file: $AAPS_APK_FILE"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -95,7 +109,6 @@ jobs:
         with:
           name: 'AndroidAPS-$AAPS_VERSION'
           path: ${{steps.sign_app.outputs.signedReleaseFile}}
-          # path: app/build/outputs/apk/full/release/app-full-release-unsigned-signed.apk
           retention-days: 1
 
       - name: Upload to Dropbox
@@ -104,7 +117,7 @@ jobs:
         run: |
           curl -X POST https://content.dropboxapi.com/2/files/upload --fail \
             --header "Authorization: Bearer ${{ inputs.dropboxAccessToken }}" \
-            --header "Dropbox-API-Arg: {\"path\":\"/AndroidAPS-$AAPS_VERSION.apk\"}" \
+            --header "Dropbox-API-Arg: {\"path\":\"/${{env.AAPS_APK_FILE}}\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary @${{steps.sign_app.outputs.signedReleaseFile}}
 
@@ -115,7 +128,7 @@ jobs:
           curl -X POST -L --fail \
             --header "Authorization: Bearer ${{ inputs.googleDriveAccessToken }}" \
             -F "metadata={ \
-              \"name\":\"AndroidAPS-$AAPS_VERSION.apk\" \
+              \"name\":\"${{env.AAPS_APK_FILE}}\" \
               };type=application/json;charset=UTF-8" \
             -F "file=@${{steps.sign_app.outputs.signedReleaseFile}}" \
           "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
