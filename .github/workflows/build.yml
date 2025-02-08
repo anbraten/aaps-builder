@@ -64,15 +64,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build app with Gradle
-        if: ${{ inputs.flavor == 'app' }}
-        run: ./gradlew app:assembleFullRelease
-
-      - name: Build wear with Gradle
-        if: ${{ inputs.flavor == 'wear' }}
-        run: |
-          ./gradlew wear:assembleFullRelease
-          mv wear/ app/
+      - name: Build with Gradle
+        run: ./gradlew ${{ inputs.flavor == 'wear' && 'wear' || 'app' }}:assembleFullRelease
 
       - name: Setup build tool version variable
         shell: bash
@@ -85,7 +78,7 @@ jobs:
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: app/build/outputs/apk/full/release
+          releaseDirectory: ${{ inputs.flavor == 'wear' && 'wear' || 'app' }}/build/outputs/apk/full/release
           signingKeyBase64: ${{ inputs.keyStoreContent }}
           keyStorePassword: ${{ inputs.keyStorePassword }}
           alias: ${{ inputs.keyAlias }}
