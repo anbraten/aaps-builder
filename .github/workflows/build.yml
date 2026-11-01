@@ -49,6 +49,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Inputs aren't masked by default and the logs of forks are public. This has to stay the
+      # first step and read the event file, as `env:` values would be printed in the step header.
+      - name: Mask inputs
+        shell: bash
+        run: |
+          for input in keyStoreContent keyStorePassword keyPassword keyAlias googleDriveAccessToken dropboxAccessToken; do
+            jq -r --arg input "$input" '.inputs[$input] // empty' "$GITHUB_EVENT_PATH" | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                echo "::add-mask::$line"
+              fi
+            done
+          done
+
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
@@ -65,7 +78,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew ${{ inputs.flavor == 'wear' && 'wear' || 'app' }}:assembleFullRelease
+        # Same memory limits as the upstream CI, the defaults of AAPS exhaust the memory of the runner
+        run: |
+          ./gradlew ${{ inputs.flavor == 'wear' && 'wear' || 'app' }}:assembleFullRelease \
+            -Dorg.gradle.jvmargs="-Xmx8g -XX:+UseParallelGC -Xss4m" \
+            -Dkotlin.daemon.jvm.options="-Xmx2g" \
+            -Dkotlin.compiler.execution.strategy="in-process" \
+            -Dorg.gradle.workers.max=8
 
       - name: Setup build tool version variable
         shell: bash
@@ -100,7 +119,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ inputs.uploadAsArtifact == true }}
         with:
-          name: 'AndroidAPS-$AAPS_VERSION'
+          name: 'AndroidAPS-${{env.AAPS_VERSION}}'
           path: ${{steps.sign_app.outputs.signedReleaseFile}}
           retention-days: 1
 
